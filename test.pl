@@ -30,7 +30,7 @@ $c = $f2->Canvas(-width => 100, -height => 30)->pack;
 $c->createText(0,0,-anchor => 'nw', -text => 'Canvas Text');
 
 $fd = $top->FontDialog(-nicefont => 0,
-		       -font => $b->cget(-font),
+		       #-font => $b->cget(-font),
 		       -title => 'Schriftart?',
 		       #-familylabel => '~Schriftfamilie;',
 		       #-sizelabel => '~Grφίe:',
