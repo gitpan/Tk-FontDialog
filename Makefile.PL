@@ -10,11 +10,20 @@ WriteMakefile(
 );
 
 sub MY::postamble {
-    if (defined $ENV{USER} && $ENV{USER} eq 'eserte') {
-        <<'EOF';
-release :: dist
-	cpan-upload $(DISTVNAME).tar$(SUFFIX)
+    my $postamble = <<'EOF';
+demo :: pure_all
+	$(FULLPERL) -w -Mblib -MTk -MTk::FontDialog -e 'tkinit->FontDialog->Show'
+
+EOF
+
+    if (defined $ENV{USER} && $ENV{USER} eq 'eserte' && $^O =~ /bsd/i && -f "../../perl.release.mk") {
+	$postamble .= <<'EOF';
+
+.include "../../perl.release.mk"
+.include "../../perl.cvs.mk"
 
 EOF
     }
+
+    $postamble;
 }
