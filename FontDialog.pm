@@ -2,7 +2,7 @@
 # -*- perl -*-
 
 #
-# $Id: FontDialog.pm,v 1.4 1998/08/25 18:10:52 eserte Exp $
+# $Id: FontDialog.pm,v 1.9 1999/03/29 18:38:31 eserte Exp $
 # Author: Slaven Rezic
 #
 # Copyright (C) 1998 Slaven Rezic. All rights reserved.
@@ -15,7 +15,7 @@
 
 package Tk::FontDialog;
 
-use Tk 800; # new font function
+use Tk 800; # new font function, Tk::ItemStyle
 
 use strict;
 use vars qw($VERSION @ISA);
@@ -23,13 +23,14 @@ use vars qw($VERSION @ISA);
 
 Construct Tk::Widget 'FontDialog';
 
-$VERSION = '0.01';
+$VERSION = '0.03';
 
 sub Populate {
     my($w, $args) = @_;
 
     require Tk::HList;
     require Tk::ItemStyle;
+    require Tk::Adjuster;
     
     $w->SUPER::Populate($args);
     $w->protocol('WM_DELETE_WINDOW' => ['Cancel', $w ]);
@@ -57,41 +58,45 @@ sub Populate {
     my $overstrike_font = $w->fontCreate($w->fontActual($dialog_font),
 					 -overstrike => 1);
 
-    $w->Label
+    my $f1     = $w->Frame->pack#Adjust XXX
+      (-expand => 1, -fill => 'both',
+				       -padx => 2, -pady => 2);
+    my $ffam   = $f1->Frame->pack(-expand => 1, -fill => 'both',
+				  -side => 'left');
+    my $fsize  = $f1->Frame->pack(-expand => 1, -fill => 'both',
+				  -side => 'left');
+    my $fstyle = $f1->Frame->pack(-expand => 1, -fill => 'both',
+				  -side => 'left');
+
+    $ffam->Label
       (-text => 'Family:',
        -underline => 0,
        -font => $bold_font,
-      )->grid(-column => 1, -row => 1,
-	      -sticky => 'w');
+      )->pack(-anchor => 'w');
 
-    my $famlb = $w->Scrolled
+    my $famlb = $ffam->Scrolled
       ('HList',
        -scrollbars => 'osoe',
        -selectmode => 'single',
        -bg => 'white',
        -browsecmd => sub { $w->UpdateFont(-family => $_[0]) },
-      )->grid(-column => 1, -row => 2,
-	      -rowspan => 4,
-	      -sticky => 'nesw');
-     $w->Advertise('family_list' => $famlb);
+      )->pack(-expand => 1, -fill => 'both', -anchor => 'w');
+    $w->Advertise('family_list' => $famlb);
 
-    $w->Label
+    $fsize->Label
       (-text => 'Size:',
        -underline => 0,
        -font => $bold_font,
-      )->grid(-column => 2, -row => 1,
-	      -sticky => 'w');
+      )->pack(-anchor => 'w');
 
-    my $sizelb = $w->Scrolled
+    my $sizelb = $fsize->Scrolled
       ('HList',
        -scrollbars => 'oe',
        -width => 3,
        -bg => 'white',
        -selectmode => 'single',
        -browsecmd => sub { $w->UpdateFont(-size => $_[0]) },
-      )->grid(-column => 2, -row => 2,
-	      -rowspan => 4,
-	      -sticky => 'nesw');
+      )->pack(-expand => 1, -fill => 'both', -anchor => 'w');
     $w->Advertise('size_list' => $sizelb);
 
     my @fontsizes;
@@ -110,8 +115,12 @@ sub Populate {
 	}
     }
 
+    $fstyle->Label->pack; # dummy, placeholder
+    my $fstyle2 = $fstyle->Frame->pack(-expand => 1, -fill => 'both',
+				       -side => 'left');
+
     my $weight = $w->fontActual($w->{'curr_font'}, -weight);
-    my $wcb = $w->Checkbutton
+    my $wcb = $fstyle2->Checkbutton
       (-variable => \$weight,
        -font => $bold_font,
        -onvalue => 'bold',
@@ -119,9 +128,9 @@ sub Populate {
        -text => 'Bold',
        -underline => 0, 
        -command => sub { $w->UpdateFont(-weight => $weight) }
-      )->grid(-column => 3, -row => 2, -sticky => 'w');
+      )->pack(-anchor => 'w', -expand => 1);
     my $slant = $w->fontActual($w->{'curr_font'}, -slant);
-    my $scb = $w->Checkbutton
+    my $scb = $fstyle2->Checkbutton
       (-variable => \$slant,
        -font => $italic_font,
        -onvalue => 'italic',
@@ -129,9 +138,9 @@ sub Populate {
        -text => 'Italic',
        -underline => 0,
        -command => sub { $w->UpdateFont(-slant => $slant) }
-      )->grid(-column => 3, -row => 3, -sticky => 'w');
+      )->pack(-anchor => 'w', -expand => 1);
     my $underline = $w->fontActual($w->{'curr_font'}, -underline);
-    my $ucb = $w->Checkbutton
+    my $ucb = $fstyle2->Checkbutton
       (-variable => \$underline,
        -font => $underline_font,
        -onvalue => 1,
@@ -139,9 +148,9 @@ sub Populate {
        -text => 'Underline',
        -underline => 0,
        -command => sub { $w->UpdateFont(-underline => $underline) }
-      )->grid(-column => 3, -row => 4, -sticky => 'w');
+      )->pack(-anchor => 'w', -expand => 1);
     my $overstrike = $w->fontActual($w->{'curr_font'}, -overstrike);
-    my $ocb = $w->Checkbutton
+    my $ocb = $fstyle2->Checkbutton
       (-variable => \$overstrike,
        -font => $overstrike_font,
        -onvalue => 1,
@@ -149,19 +158,18 @@ sub Populate {
        -text => 'Overstrike',
        -underline => 1,
        -command => sub { $w->UpdateFont(-overstrike => $overstrike) }
-      )->grid(-column => 3, -row => 5, -sticky => 'w');
+      )->pack(-anchor => 'w', -expand => 1);
 
     my $c = $w->Canvas
       (-height => 36,
        -bg => 'white',
        -relief => 'sunken',
        -bd => 2,
-      )->grid(-column => 1, -row => 6, -columnspan => 3,
-	      -sticky => 'ew', -padx => 5, -pady => 5);
+      )->pack(-expand => 1, -fill => 'both',
+	      -padx => 3, -pady => 3);
     $w->Advertise('sample_canvas' => $c);
 
-    my $bf = $w->Frame->grid(-row => 7, -column => 1,
-			     -columnspan => 3, -sticky => 'news');
+    my $bf = $w->Frame->pack(-fill => 'x', -padx => 3, -pady => 3);
 
     my $okb = $bf->Button
       (-text => 'OK',
@@ -194,12 +202,19 @@ sub Populate {
 	      -sticky => 'ew', -padx => 5);
     $bf->grid('columnconfigure', 3, -weight => 1.0);
 
+    my $altcb = $bf->Checkbutton
+      (-text => 'Alt sample',
+       -underline => 1,
+       -variable => \$w->{'alt_sample'},
+       -command => sub { $w->UpdateFont; },
+      )->grid(-column => 4, -row => 0,
+	      -sticky => 'ew', -padx => 5);
     my $nicecb = $bf->Checkbutton
       (-text => 'Nicefonts',
        -underline => 0,
        -variable => \$w->{Configure}{-nicefont},
        -command => sub { $w->InsertFamilies; },
-      )->grid(-column => 4, -row => 0,
+      )->grid(-column => 5, -row => 0,
 	      -sticky => 'ew', -padx => 5);
     
     $w->grid('columnconfigure', 0, -minsize => 4);
@@ -210,16 +225,18 @@ sub Populate {
     $w->bind('<f>' => sub { $famlb->focus });
     $w->bind('<s>' => sub { $sizelb->focus });
 
-    $w->bind('<b>' => sub { $wcb->focus });
-    $w->bind('<i>' => sub { $scb->focus });
-    $w->bind('<u>' => sub { $ucb->focus });
-    $w->bind('<v>' => sub { $ocb->focus });
+    $w->bind('<b>' => sub { $wcb->invoke });
+    $w->bind('<i>' => sub { $scb->invoke });
+    $w->bind('<u>' => sub { $ucb->invoke });
+    $w->bind('<v>' => sub { $ocb->invoke });
 
     $w->bind('<o>'      => sub { $okb->invoke });
     $w->bind('<Return>' => sub { $okb->invoke });
     $w->bind('<a>'      => sub { $applyb->invoke }) if $applyb;
     $w->bind('<c>'      => sub { $cancelb->invoke });
     $w->bind('<Escape>' => sub { $cancelb->invoke });
+    $w->bind('<l>'      => sub { $altcb->invoke });
+    $w->bind('<n>'      => sub { $nicecb->invoke });
 
     # XXX -subbg: ugly workaround...
     $w->ConfigSpecs
@@ -227,7 +244,7 @@ sub Populate {
        -nicefont => [ 'PASSIVE', undef, undef, 0],
        -sampletext => ['PASSIVE', undef, undef, 
 		       'The Quick Brown Fox Jumps Over The Lazy Dog.'],
-       -title => [ 'METHOD', undef, undef, 'Choose a font'],
+       -title => [ 'METHOD', undef, undef, 'Choose font'],
        DEFAULT   => [ 'family_list' ],
       );
 
@@ -246,16 +263,39 @@ sub Populate {
 sub UpdateFont {
     my($w, %args) = @_;
     $w->fontConfigure($w->{'curr_font'}, %args) if scalar %args;
-    $w->Subwidget('sample_canvas')->delete('font');
+    my $c = $w->Subwidget('sample_canvas');
+    $c->delete('font');
 # XXX see below
 #    $w->Busy;
     eval {
-	$w->Subwidget('sample_canvas')->createText
-	  (2, 18,
-	   -anchor => 'w',
-	   -text => $w->cget(-sampletext),
-	   -font => $w->{'curr_font'},
-	   -tags => 'font');
+	my $sampletext;
+	my $ch_width  = $w->fontMeasure($w->{'curr_font'}, 'M');
+	my $ch_height = $w->fontMetrics($w->{'curr_font'}, -linespace);
+	if ($w->{'alt_sample'}) {
+	    my $x;
+	    my $y = 4;
+	    for(my $i = 32; $i < 256; $i+=16) {
+		$x = 4;
+		for my $j (0 .. 15) {
+		    next if $i+$j == 127;
+		    my $ch = chr($i + $j);
+		    unless ($ch eq "\r" || $ch eq "\n") {
+			$c->createText($x, $y, -anchor => 'nw',
+				       -text => $ch,
+				       -font => $w->{'curr_font'},
+				       -tags => 'font');
+		    }
+		    $x += $ch_width + 4;
+		}
+		$y += $ch_height;
+	    }
+	} else {
+	    $c->createText(4, 4,
+			   -anchor => 'nw',
+			   -text => $w->cget(-sampletext),
+			   -font => $w->{'curr_font'},
+			   -tags => 'font');
+	}
     };
 #    $w->Unbusy;
 }
@@ -320,7 +360,7 @@ sub ReturnFont {
 sub InsertFamilies {
     my $w = shift;
 
-# XXX Busy ist gefährlich ... anscheinend wird der alte grab nicht
+# XXX Busy ist gefaehrlich ... anscheinend wird der alte grab nicht
 # richtig gespeichert!
 #    $w->Busy;
     eval {
@@ -348,6 +388,33 @@ sub InsertFamilies {
 
 }
 
+# put some dirt into Tk::Widget...
+package Tk::Widget;
+
+# XXX Refont Canvases?
+sub RefontTree {
+    my ($w, %args) = @_;
+    my $dbOption;
+    my $value;
+    my $font = $args{-font} or die "No font specified";
+    eval { local $SIG{'__DIE__'}; $value = $w->cget(-font) };
+    if (defined $value) {
+	$w->configure(-font => $font);
+    }
+    if ($w->isa('Tk::Canvas') and $args{-canvas}) {
+	foreach my $item ($w->find('all')) {
+	    eval { local $SIG{'__DIE__'};
+		   $value = $w->itemcget($item, -font) };
+	    if (defined $value) {
+		$w->itemconfigure($item, -font => $font);
+	    }
+	}
+    }
+    foreach my $child ($w->children) {
+	$child->RefontTree(%args);
+    }
+}
+
 1;
 
 __END__
@@ -371,13 +438,28 @@ Tk::FontDialog implements a font dialog widget. XXX
 
 =item -font
 
+The dialog font.
+
 =item -initfont
+
+The initial font.
 
 =item -fontsizes
 
+A list of font sizes. The default contains sizes from 0 to 72 points
+(XXX or pixels?).
+
 =item -nicefont
 
+If set, the Nicefonts button is activated. This means that the font
+names are displayed in its font style. This may be slow, especially if
+you have many fonts or 16 bit fonts (e.g. Asian fonts).
+
 =item -sampletext
+
+The sample text which should contain all letters. The default is "The
+Quick Brown Fox Jumps Over The Lazy Dog" German readers may probably
+use "Franz jagt im komplett verwahrlosten Taxi quer durch Bayern".
 
 =back
 
@@ -389,6 +471,8 @@ Tk::FontDialog implements a font dialog widget. XXX
     put at least -font into configspecs
   - run test, call dialog for 2nd time: immediate change of font?
   - better name for nicefont
+  - restrict on charsets and encodings (xlsfonts? X11::Protocol::ListFonts?)
+    difficult because core Tk font handling ignores charsets and encodings
 
 =head1 SEE ALSO
 
