@@ -2,7 +2,7 @@
 # -*- perl -*-
 
 #
-# $Id: FontDialog.pm,v 1.13 1999/09/23 20:32:59 eserte Exp $
+# $Id: FontDialog.pm,v 1.17 2002/10/23 09:11:18 eserte Exp $
 # Author: Slaven Rezic
 #
 # Copyright (C) 1998,1999 Slaven Rezic. All rights reserved.
@@ -23,14 +23,14 @@ use vars qw($VERSION @ISA);
 
 Construct Tk::Widget 'FontDialog';
 
-$VERSION = '0.06';
+$VERSION = '0.07';
 
 sub Populate {
     my($w, $args) = @_;
 
     require Tk::HList;
     require Tk::ItemStyle;
-    
+
     $w->SUPER::Populate($args);
     $w->protocol('WM_DELETE_WINDOW' => ['Cancel', $w ]);
 
@@ -39,8 +39,15 @@ sub Populate {
     if (exists $args->{-font}) {
 	$w->optionAdd('*font' => delete $args->{-font});
     }
-    my $dialog_font = $w->fontCreate($w->fontActual
-				     ($w->optionGet("font", "*")));
+    my $dialog_font;
+    my $font_name = $w->optionGet("font", "*");
+    if (!defined $font_name) {
+	my $l = $w->Label;
+	$dialog_font = $l->cget(-font);
+	warn $dialog_font;
+    } else {
+	$dialog_font = $w->fontCreate($w->fontActual($font_name));
+    }
     if (exists $args->{-initfont}) {
 	$w->{'curr_font'} = $w->fontCreate($w->fontActual
 					   (delete $args->{-initfont}));
@@ -66,7 +73,7 @@ sub Populate {
     my $fstyle = $f1->Frame->pack(-expand => 1, -fill => 'both',
 				  -side => 'left');
 
-    my(%family_res) = _get_label(delete $args->{'-familylabel'} 
+    my(%family_res) = _get_label(delete $args->{'-familylabel'}
 				 || '~Family:');
     $ffam->Label
       (@{$family_res{'args'}},
@@ -101,6 +108,7 @@ sub Populate {
        -browsecmd => sub { $w->UpdateFont(-size => $_[0]) },
       )->pack(-expand => 1, -fill => 'both', -anchor => 'w');
     $w->Advertise('size_list' => $sizelb);
+    $sizelb->bind("<3>" => [ $w, '_custom_size' ]);
 
     my @fontsizes;
     if (exists $args->{-fontsizes}) {
@@ -114,6 +122,7 @@ sub Populate {
 	$sizelb->add($size, -text => $size);
 	if ($size == $curr_size) {
 	    $sizelb->selectionSet($size);
+	    $sizelb->anchorSet($size);
 	    $sizelb->see($size);
 	}
     }
@@ -238,7 +247,7 @@ sub Populate {
 		  -sticky => 'w', -padx => 5);
     }
     delete $args->{'-nicefontsbutton'};
-    
+
     my(%fixedfonts_res, $fixedcb);
     if (!exists $args->{'-fixedfontsbutton'} || $args->{'-fixedfontsbutton'}) {
 	%fixedfonts_res = _get_label(delete $args->{'-fixedfontslabel'}
@@ -251,7 +260,7 @@ sub Populate {
 		  -sticky => 'w', -padx => 5);
     }
     delete $args->{'-fixedfontsbutton'};
-    
+
     $w->grid('columnconfigure', 0, -minsize => 4);
     $w->grid('columnconfigure', 4, -minsize => 4);
     $w->grid('rowconfigure',    0, -minsize => 4);
@@ -288,12 +297,14 @@ sub Populate {
 
     # XXX -subbg: ugly workaround...
     $w->ConfigSpecs
-      (-subbg       => [ 'PASSIVE', 'subBackground', 'SubBackground', 'white'],
-       -nicefont    => [ 'PASSIVE', undef, undef, 0],
-       -fixedfont   => [ 'PASSIVE', undef, undef, 0],
-       -sampletext  => [ 'PASSIVE', undef, undef, 
-		         'The Quick Brown Fox Jumps Over The Lazy Dog.'],
-       -title       => [ 'METHOD', undef, undef, 'Choose font'],
+      (-subbg           => [ 'PASSIVE', 'subBackground', 'SubBackground',
+                             'white'],
+       -nicefont        => [ 'PASSIVE', undef, undef, 0],
+       -fixedfont       => [ 'PASSIVE', undef, undef, 0],
+       -sampletext      => [ 'PASSIVE', undef, undef, 
+		             'The Quick Brown Fox Jumps Over The Lazy Dog.'],
+       -title           => [ 'METHOD', undef, undef, 'Choose font'],
+       -customsizetitle => [ 'PASSIVE', undef, undef, 'Choose font size'],
        DEFAULT   => [ 'family_list' ],
       );
 
@@ -361,7 +372,9 @@ sub Accept {
 }
 
 sub Show {
-    my($w, @args) = @_;
+    my($w, %args) = @_;
+
+    my $test_hack = delete $args{'-_testhack'};
 
     $w->transient($w->Parent->toplevel);
     my $oldFocus = $w->focusCurrent;
@@ -376,11 +389,11 @@ sub Show {
     $w->Subwidget('size_list')->configure(-bg => $w->cget(-subbg));
     $w->Subwidget('sample_canvas')->configure(-bg => $w->cget(-subbg));
 
-    $w->Popup(@args); 
+    $w->Popup(%args);
     # XXX won't work with 800.015?
     #$w->waitVisibility;
     $w->focus;
-    $w->waitVariable(\$w->{Selected});
+    $w->waitVariable(\$w->{Selected}) unless $test_hack;
 
     eval {
 	$oldFocus->focus if $oldFocus;
@@ -429,18 +442,19 @@ sub InsertFamilies {
 	my $i = 0;
 	foreach my $fam (@fam) {
 	    next if $fam eq '';
-	    next if $fixedfont 
+	    next if $fixedfont
 	      and not $w->fontMetrics($w->Font(-family => $fam), '-fixed');
 	    (my $u_fam = $fam) =~ s/\b(.)/\u$1/g;
 	    $w->{'family_index'}[$i] = $fam;
 	    my $f_style = $famlb->ItemStyle
-	      ('text', 
+	      ('text',
 	       ($nicefont ? (-font => "{$fam}") : ()),
-	       -bg => $bg,
+	       -background => $bg,
 	      );
 	    $famlb->add($i, -text => $u_fam, -style => $f_style);
 	    if ($curr_family eq $fam) {
 		$famlb->selectionSet($i);
+		$famlb->anchorSet($i);
 		$famlb->see($i);
 	    }
 	    $i++;
@@ -466,6 +480,54 @@ sub _get_label {
 	@{$res{'args'}} = (-text => $s);
     }
     %res;
+}
+
+sub _custom_size {
+    my($w) = @_;
+    my $t = $w->Toplevel;
+    my $label = $w->cget(-customsizetitle);
+    $t->title($label);
+
+    my $sizelb = $w->Subwidget("size_list");
+    my $fontsize = 10;
+    if (defined $sizelb->info("selection")) {
+	$fontsize = $sizelb->entrycget($sizelb->info("selection"), -text);
+    }
+
+    my $f1 = $t->Frame->pack;
+    $f1->Label(-text => $label)->pack(-side => 'left');
+    my $e = $f1->Entry(-width => 4,
+		       -textvariable => \$fontsize)->pack(-side => "left");
+    $e->focus;
+    $e->selectionRange(0,'end');
+    $e->icursor('end');
+
+    my $f = $t->Frame->pack;
+    my $waitvar = 0;
+    my $ok = $f->Button
+      (-text => "Ok",
+       -command => sub {
+	   $w->UpdateFont(-size => $fontsize);
+	   $sizelb->selectionClear;
+	   $sizelb->anchorClear;
+	   foreach ($sizelb->info("children")) {
+	       if ($sizelb->entrycget($_, -text) eq $fontsize) {
+		   $sizelb->selectionSet($_);
+		   $sizelb->anchorSet($_);
+		   $sizelb->see($_);
+		   last;
+	       }
+	   }
+	   $waitvar = 1;
+       })->pack(-side => "left");
+    $f->Button(-text => "Cancel",
+	       -command => sub { $waitvar = -1 })->pack(-side => "left");
+
+    $e->bind("<Return>" => sub { $ok->invoke });
+
+    $t->Popup(-popover => "cursor");
+    $t->waitVariable(\$waitvar);
+    $t->destroy;
 }
 
 # put some dirt into Tk::Widget...
@@ -511,7 +573,22 @@ Tk::FontDialog - a font dialog widget for perl/Tk
 
 =head1 DESCRIPTION
 
-Tk::FontDialog implements a font dialog widget. XXX
+Tk::FontDialog implements a font dialog widget.
+
+In the Family and Size listboxes, the font family and font size can be
+specified. The checkbuttons on the right turn on bold, italic,
+underlined and overstriked variants of the chosen font. A sample of
+the font is shown in the middle area.
+
+With the "Alt sample" checkbutton, it is possible to show all
+characters in the charset instead of the default text. "Fixed only"
+restricts the font family list to fixed fonts only. If the "Nicefonts"
+checkbutton is set, then the font names in the listbox are displayed
+in the corresponding font. Note that this option can be slow if a lot
+of fonts are installed or for 16 bit fonts.
+
+A click with the right button in the font size listbox pops up a
+window to enter arbitrary font sizes.
 
 =head1 WIDGET-SPECIFIC OPTIONS
 
@@ -590,12 +667,22 @@ setting:
 
 =item -fixedfontslabel (Fixed Only)
 
+=item -title (Choose font)
+
+=item -customsizetitle (Choose font size)
+
 =back
+
+=head1 CAVEAT
+
+Note that font names with whitespace like "New century schoolbook" or
+"MS Sans Serif" can cause problems when using in a -font option. The
+solution is to put the names in Tcl-like braces, like
+
+    -font => "{New century schoolbook} 10"
 
 =head1 BUGS/TODO
 
-  - better POD
-  - XXX
   - ConfigSpecs handling is poor
     put at least -font into configspecs
   - run test, call dialog for 2nd time: immediate change of font?
