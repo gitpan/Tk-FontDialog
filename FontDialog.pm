@@ -2,7 +2,7 @@
 # -*- perl -*-
 
 #
-# $Id: FontDialog.pm,v 1.23 2005/08/14 08:28:47 eserte Exp $
+# $Id: FontDialog.pm,v 1.27 2006/11/12 21:48:03 eserte Exp $
 # Author: Slaven Rezic
 #
 # Copyright (C) 1998,1999,2003,2004,2005 Slaven Rezic. All rights reserved.
@@ -24,7 +24,7 @@ use vars qw($VERSION @ISA);
 
 Construct Tk::Widget 'FontDialog';
 
-$VERSION = '0.11';
+$VERSION = '0.12';
 
 sub Populate {
     my($w, $args) = @_;
@@ -451,7 +451,9 @@ sub InsertFamilies {
 	$w->{'family_index'} = [];
 	my $nicefont = $w->cget(-nicefont); # XXX name?
 	my $fixedfont = $w->cget(-fixedfont);
-	my $curr_family = $w->fontActual($w->{'curr_font'}, -family);
+	my %fa = $w->fontActual($w->{'curr_font'});
+	my $curr_family = $fa{'-family'};
+	my $curr_size = $fa{'-size'};
 	my $famlb = $w->Subwidget('family_list');
 	$famlb->delete('all');
 	my @fam = sort $w->fontFamilies;
@@ -465,7 +467,7 @@ sub InsertFamilies {
 	    $w->{'family_index'}[$i] = $fam;
 	    my $f_style = $famlb->ItemStyle
 	      ('text',
-	       ($nicefont ? (-font => "{$fam}") : ()),
+	       ($nicefont ? (-font => "{$fam} $curr_size") : ()),
 	       -background => $bg,
 	      );
 	    $famlb->add($i, -text => $u_fam, -style => $f_style);
@@ -589,6 +591,28 @@ sub RefontTree {
     }
 }
 
+sub GetDescriptiveFontName {
+    my($w, $fontname) = @_;
+
+    my %fa = $w->fontActual($fontname);
+
+    my $fontdescriptive = "{$fa{-family}} $fa{-size}";
+    if ($fa{-weight} ne "normal") {
+	$fontdescriptive .= " $fa{-weight}";
+    }
+    if ($fa{-slant} ne "roman") {
+	$fontdescriptive .= " $fa{-slant}";
+    }
+    if ($fa{-underline}) {
+	$fontdescriptive .= " underline";
+    }
+    if ($fa{-overstrike}) {
+	$fontdescriptive .= " overstrike";
+    }
+
+    $fontdescriptive;
+}
+
 1;
 
 __END__
@@ -606,6 +630,13 @@ Tk::FontDialog - a font dialog widget for perl/Tk
 
 Tk::FontDialog implements a font dialog widget.
 
+The dialog is displayed by calling the B<Show> method. The returned
+value is either the selected font (if the dialog was closed with the
+Ok button) or undef (otherwise). The exact type of the return value is
+either a L<Tk::Font> object (in Tk800) or a font name string (usually
+something like C<font1>). Both can be used as values in Tk C<-font>
+options. See L</GetDescriptiveFontName>
+
 In the Family and Size listboxes, the font family and font size can be
 specified. The checkbuttons on the right turn on bold, italic,
 underlined and overstriked variants of the chosen font. A sample of
@@ -620,6 +651,7 @@ of fonts are installed or for 16 bit fonts.
 
 A click with the right button in the font size listbox pops up a
 window to enter arbitrary font sizes.
+
 
 =head1 WIDGET-SPECIFIC OPTIONS
 
@@ -706,6 +738,10 @@ setting:
 
 =head1 METHODS IN Tk::Widget
 
+=over
+
+=item B<RefontTree>(-font => I<$font>)
+
 Additionaly, the convenience method B<RefontTree> is defined in the
 L<Tk::Widget> namespace. Using this method a font definition could be
 applied to a complete subtree of a widget. This is similar to the
@@ -716,6 +752,15 @@ method B<RecolorTree>. Calling B<RefontTree> looks like this:
 
 By default RefontTree does not change the font of canvas elements.
 This can be done by specifying C<-canvas => 1>.
+
+=item B<GetDescriptiveFontName>(I<$fontname>)
+
+Return a "descriptive" font name (just like form [3] as described in
+L<Tk::Font>). The return value from the Show() method has the
+disadvantage that it is only valid for the current Tk session. A
+"descriptive" font name may be stored and reused later.
+
+=back
 
 =head1 CAVEAT
 
@@ -752,6 +797,14 @@ new font to the whole application:
     	        })->pack;
     MainLoop;
 
+To get the "descriptive" font name:
+
+    $font = $mw->FontDialog->Show;
+    if (defined $font) {
+	$font_descriptive = $mw->GetDescriptiveFontName($font);
+	print $font_descriptive, "\n";
+    }
+
 =head1 AVAILABILITY
 
 The latest released version is available from cpan (e.g.
@@ -770,17 +823,18 @@ L<http://cvs.sourceforge.net/viewcvs.py/srezic/Tk-FontDialog/>).
 
 =head1 SEE ALSO
 
-L<Tk::font|Tk::font>
+L<Tk::Font>
 
 =head1 AUTHOR
 
 Slaven Rezic <slaven@rezic.de>
 
-Suggestions by Michael Houghton <herveus@Radix.Net>.
+Suggestions by Michael Houghton, Martin Thurn, Jack, Justin Kozlowitz
+and others.
 
 =head1 COPYRIGHT
 
-Copyright (c) 1998,1999,2003,2004 Slaven Rezic. All rights reserved.
+Copyright (c) 1998,1999,2003,2004,2005 Slaven Rezic. All rights reserved.
 This module is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
 
