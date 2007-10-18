@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:                Tk-FontDialog
-version:             0.13
+version:             0.13_90
 abstract:            ~
 license:             ~
 generated_by:        ExtUtils::MakeMaker version 6.32
