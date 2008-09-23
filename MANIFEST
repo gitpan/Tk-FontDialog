@@ -3,5 +3,4 @@ FontDialog.pm
 MANIFEST
 Makefile.PL
 README
-test.pl
-META.yml                                 Module meta-data (added by MakeMaker)
+t/00-basic.t
