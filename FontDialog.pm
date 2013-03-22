@@ -2,10 +2,9 @@
 # -*- perl -*-
 
 #
-# $Id: FontDialog.pm,v 1.33 2008/09/23 19:23:19 eserte Exp $
 # Author: Slaven Rezic
 #
-# Copyright (C) 1998,1999,2003,2004,2005 Slaven Rezic. All rights reserved.
+# Copyright (C) 1998,1999,2003,2004,2005,2010,2011,2013 Slaven Rezic. All rights reserved.
 # This program is free software; you can redistribute it and/or
 # modify it under the same terms as Perl itself.
 #
@@ -24,7 +23,7 @@ use vars qw($VERSION @ISA);
 
 Construct Tk::Widget 'FontDialog';
 
-$VERSION = '0.15';
+$VERSION = '0.16';
 
 sub Populate {
     my($w, $args) = @_;
@@ -774,7 +773,7 @@ method B<RecolorTree>. Calling B<RefontTree> looks like this:
     $mainwindow->RefontTree(-font => $font) if defined $font;
 
 By default RefontTree does not change the font of canvas elements.
-This can be done by specifying C<-canvas => 1>.
+This can be done by specifying C<< -canvas => 1 >>.
 
 =item B<GetDescriptiveFontName>(I<$fontname>)
 
@@ -832,8 +831,7 @@ To get the "descriptive" font name:
 
 The latest released version is available from cpan (e.g.
 L<http://search.cpan.org/~srezic/>). The latest development version is
-available from SourceForge CVS (e.g.
-L<http://cvs.sourceforge.net/viewcvs.py/srezic/Tk-FontDialog/>).
+available from github (L<http://github.com/eserte/tk-fontdialog>).
 
 =head1 BUGS/TODO
 
@@ -857,7 +855,7 @@ and others.
 
 =head1 COPYRIGHT
 
-Copyright (c) 1998,1999,2003,2004,2005 Slaven Rezic. All rights reserved.
+Copyright (c) 1998,1999,2003,2004,2005,2010 Slaven Rezic. All rights reserved.
 This module is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
 

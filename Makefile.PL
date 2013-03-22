@@ -1,11 +1,29 @@
 use ExtUtils::MakeMaker;
 # See lib/ExtUtils/MakeMaker.pm for details of how to influence
 # the contents of the Makefile that is written.
+
+my $eumm_recent_enough = $ExtUtils::MakeMaker::VERSION >= 6.54;
+
+if (!$eumm_recent_enough) {
+    *MY::dist_core = sub {
+	<<'EOF';
+dist :
+	$(NOECHO) $(ECHO) "Sorry, use a newer EUMM!"
+
+EOF
+    };
+}
+
 WriteMakefile(
     'NAME'	=> 'Tk::FontDialog',
     'VERSION_FROM' => 'FontDialog.pm', # finds $VERSION
     'PREREQ_PM' => {'Tk'             => 800},
     'dist'      => {'POSTOP'=>'-$(CHMOD) 644 $(DISTVNAME).tar$(SUFFIX)'},
+    ($eumm_recent_enough
+     ? (META_MERGE => { resources => { repository => 'git://github.com/eserte/tk-fontdialog.git' },
+		      })
+     : ()
+    ),
 );
 
 sub MY::postamble {
