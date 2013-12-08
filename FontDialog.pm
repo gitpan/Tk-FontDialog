@@ -23,7 +23,7 @@ use vars qw($VERSION @ISA);
 
 Construct Tk::Widget 'FontDialog';
 
-$VERSION = '0.16';
+$VERSION = '0.17';
 
 sub Populate {
     my($w, $args) = @_;
@@ -415,7 +415,7 @@ sub Show {
     $w->transient($w->Parent->toplevel);
     my $oldFocus = $w->focusCurrent;
     my $oldGrab = $w->grab('current');
-    my $grabStatus = $oldGrab->grab('status') if ($oldGrab);
+    my $grabStatus; $grabStatus = $oldGrab->grab('status') if ($oldGrab);
     $w->grab;
 
     $w->InsertFamilies();
